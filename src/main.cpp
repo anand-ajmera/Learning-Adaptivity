@@ -13,20 +13,58 @@
 #include <pcl/features/range_image_border_extractor.h>
 #include <pcl/keypoints/narf_keypoint.h>
 #include <pcl/features/narf_descriptor.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/keypoints/iss_3d.h>
+#include <pcl/features/fpfh.h>
 
 using namespace std;
 
 int size_descriptor = 125;
-string data_folder = "/home/anand/robocup_ws/src/mas_datasets/generic/mds_pointclouds/objects/workspace_setups/at_home/";
+const string data_folder = "../homedataset";
+const string target_folder = "../features";
 string object_names[4] = {"MuscleBox","BigCoffeeCup","Pringles","SmallKetchupBottle"};
 string str;
+
+
+
+ 
+// This function by Tommaso Cavallari and Federico Tombari, taken from the tutorial
+// http://pointclouds.org/documentation/tutorials/correspondence_grouping.php
+double computeCloudResolution(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& cloud)
+{
+    double resolution = 0.0;
+    int numberOfPoints = 0;
+    int nres;
+    std::vector<int> indices(2);
+    std::vector<float> squaredDistances(2);
+    pcl::search::KdTree<pcl::PointXYZ> tree;
+    tree.setInputCloud(cloud);
+ 
+    for (size_t i = 0; i < cloud->size(); ++i)
+    {
+        if (! pcl_isfinite((*cloud)[i].x))
+            continue;
+ 
+        // Considering the second neighbor since the first is the point itself.
+        nres = tree.nearestKSearch(i, 2, indices, squaredDistances);
+        if (nres == 2)
+        {
+            resolution += sqrt(squaredDistances[1]);
+            ++numberOfPoints;
+        }
+    }
+    if (numberOfPoints != 0)
+        resolution /= numberOfPoints;
+ 
+    return resolution;
+}
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr load_pcd()
 {  
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
 
     str.append(data_folder);
-    str.append(object_names[1]);
+    //str.append(object_names[1]);
     str.append("/5.pcd");
 
     if (pcl::io::loadPCDFile<pcl::PointXYZ> (str, *cloud) == -1) //* load the file
@@ -65,52 +103,30 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr perform_downsampling(pcl::PointCloud<pcl::Po
 //     }
 // }
 
-void calculate_narf(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+void calculate_keypoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints)
 {
-    // Object for storing the keypoints' indices.
-    pcl::PointCloud<int>::Ptr keypoints(new pcl::PointCloud<int>);
-    // Object for storing the NARF descriptors.
-    pcl::PointCloud<pcl::Narf36>::Ptr descriptors(new pcl::PointCloud<pcl::Narf36>);
+    
+    pcl::ISSKeypoint3D<pcl::PointXYZ, pcl::PointXYZ> detector;
+    detector.setInputCloud(cloud);
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZ>);
+    detector.setSearchMethod(kdtree);
+    double resolution = computeCloudResolution(cloud);
+    // Set the radius of the spherical neighborhood used to compute the scatter matrix.
+    detector.setSalientRadius(6 * resolution);
+    // Set the radius for the application of the non maxima supression algorithm.
+    detector.setNonMaxRadius(4 * resolution);
+    // Set the minimum number of neighbors that has to be found while applying the non maxima suppression algorithm.
+    detector.setMinNeighbors(5);
+    // Set the upper bound on the ratio between the second and the first eigenvalue.
+    detector.setThreshold21(0.975);
+    // Set the upper bound on the ratio between the third and the second eigenvalue.
+    detector.setThreshold32(0.975);
+    // Set the number of prpcessing threads to use. 0 sets it to automatic.
+    detector.setNumberOfThreads(4);
  
-    // Convert the cloud to range image.
-    int imageSizeX = 640, imageSizeY = 480;
-    float centerX = (640.0f / 2.0f), centerY = (480.0f / 2.0f);
-    float focalLengthX = 525.0f, focalLengthY = focalLengthX;
-    Eigen::Affine3f sensorPose = Eigen::Affine3f(Eigen::Translation3f(cloud->sensor_origin_[0],
-                                 cloud->sensor_origin_[1],
-                                 cloud->sensor_origin_[2])) *
-                                 Eigen::Affine3f(cloud->sensor_orientation_);
-    float noiseLevel = 0.0f, minimumRange = 0.0f;
-    pcl::RangeImagePlanar rangeImage;
-    rangeImage.createFromPointCloudWithFixedSize(*cloud, imageSizeX, imageSizeY,
-            centerX, centerY, focalLengthX, focalLengthX,
-            sensorPose, pcl::RangeImage::CAMERA_FRAME,
-            noiseLevel, minimumRange);
- 
-    // Extract the keypoints.
-    pcl::RangeImageBorderExtractor borderExtractor;
-    pcl::NarfKeypoint detector(&borderExtractor);
-    detector.setRangeImage(&rangeImage);
-    detector.getParameters().support_size = 0.2f;
     detector.compute(*keypoints);
-    cout << "keypoints " << *keypoints << endl;
- 
-    // The NARF estimator needs the indices in a vector, not a cloud.
-    std::vector<int> keypoints2;
-    keypoints2.resize(keypoints->points.size());
-    for (unsigned int i = 0; i < keypoints->size(); ++i)
-        keypoints2[i] = keypoints->points[i];
-    // NARF estimation object.
-    pcl::NarfDescriptor narf(&rangeImage, &keypoints2);
-    // Support size: choose the same value you used for keypoint extraction.
-    narf.getParameters().support_size = 0.2f;
-    // If true, the rotation invariant version of NARF will be used. The histogram
-    // will be shifted according to the dominant orientation to provide robustness to
-    // rotations around the normal.
-    narf.getParameters().rotation_invariant = true;
- 
-    narf.compute(*descriptors);
-    cout << "descriptors " << *descriptors <<endl;
+    //cout<<"Keypoints"<<*keypoints<<endl;
+    
 }
 
 void calculate_pfh(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
@@ -183,11 +199,76 @@ void calculate_pfh(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
     cout << "PFH successful !" << endl;
 }
 
+void calculate_fpfh_feature(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints,
+                            pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors)
+{
+        // Object for storing the normals.
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+    // Object for storing the FPFH descriptors for each point.
+    //pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors(new pcl::PointCloud<pcl::FPFHSignature33>());
+
+        // Estimate the normals.
+    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normalEstimation;
+    normalEstimation.setInputCloud(cloud);
+    normalEstimation.setRadiusSearch(0.03);
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZ>);
+    normalEstimation.setSearchMethod(kdtree);
+    normalEstimation.compute(*normals);
+ 
+    // FPFH estimation object.
+    pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh;
+    fpfh.setSearchSurface(cloud);
+    fpfh.setInputCloud(keypoints);
+    fpfh.setInputNormals(normals);
+    fpfh.setSearchMethod(kdtree);
+    // Search radius, to look for neighbors. Note: the value given here has to be
+    // larger than the radius used to estimate the normals.
+    fpfh.setRadiusSearch(0.05);
+ 
+    fpfh.compute(*descriptors);
+    //cout<<"descriptors"<<*descriptors<<endl;
+
+}
+
+void visualize_histogram(pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors)
+{
+    const std::string id="cloud";
+    pcl::visualization::PCLHistogramVisualizer hist; 
+    hist.addFeatureHistogram (*descriptors, 33 , id, 640, 200);
+
+    // while(!hist.wasStopped())
+    {    
+        hist.spin();
+        //boost::this_thread::sleep (boost::posix_time::microseconds (100000));  
+    }
+}
+
+void write_to_file(pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors,const string filename)
+{
+    pcl::io::savePCDFile (filename, *descriptors);
+    cout<<"saved to file"<<filename;
+}
+
 int main (int argc, char** argv)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud = load_pcd();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors(new pcl::PointCloud<pcl::FPFHSignature33>());
     // cout << "Size of point cloud " << pointcloud->width * pointcloud->height<<endl;
     // calculate_pfh(pointcloud);
-    calculate_narf(pointcloud);
+    if(pointcloud != 0)
+    {
+        calculate_keypoints(pointcloud,keypoints);
+        calculate_fpfh_feature(pointcloud,keypoints,descriptors);
+        //cout<<"descriptors"<<descriptors->points[0]<<endl;   
+        //visualize_histogram(descriptors);
+        string filename = target_folder + "/5.pcd";
+        write_to_file(descriptors,filename);
+    }
+    else
+    {
+        clog<<"Null pointer"<<endl;
+    }
+    
     return 0;
 }
