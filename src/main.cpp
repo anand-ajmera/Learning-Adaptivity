@@ -281,6 +281,7 @@
         // calculate_pfh(pointcloud);
         //string in_file(data_folder),out_file(target_folder);
 
+        int choice = 0;
         cout<<"Feature Extraction Script:"<<endl;
         cout<<"Input folder:";
         cin>>data_folder;
@@ -292,9 +293,12 @@
         cin>>sample_size;
         cout<<"Number of Object:";
         cin>>object_count;
-
+        cout<<"Enter \n 1- Extract features for training \n 2 - Extract features for testing";
+        cin >> choice;
         cout<<"\nExtracting Features for given samples"<<endl;
 
+
+        int count = 0;
         for(int i = 0;i < object_count; i++)
         {
             //in_file.append(object_names[i]);
@@ -311,12 +315,30 @@
                     //cout<<"point cloud loaded"<<endl;
                         calculate_keypoints(cloud,keypoints);
                         calculate_fpfh_feature(cloud,keypoints,descriptors);
+                        //cout<<"before choice";
                         //cout<<"descriptors"<<descriptors->points[0]<<endl;
                         //saving the features to pcd file
-                        string out_file(target_folder);
-                        out_file.append(object_names[i]+"/");
-                        out_file.append(boost::to_string(j)+".csv");  
-                        write_to_file(descriptors,out_file.c_str(),i);
+                        if(choice == 1)
+                        {
+                            string out_file(target_folder);
+                            out_file.append(object_names[i]+"/");
+                            out_file.append(boost::to_string(j)+".csv");  
+                            write_to_file(descriptors,out_file.c_str(),i);  
+                        }
+                        else if(choice == 2)
+                        {
+                            //cout<<"In choice 2 ";
+                            string out_file(target_folder);
+                            //cout<<out_file;
+                            //out_file.append("/");
+                            out_file.append(boost::to_string(count)+".csv"); 
+                            write_to_file(descriptors,out_file.c_str(),i);
+                        }
+                        else
+                        {
+                            cout<<"Invalid choice\n";
+                        }
+
                         //visualize_histogram(descriptors);
                         //cout<<"object written"<<endl;
                 }
@@ -325,7 +347,7 @@
                     cerr<<"Cloud pointer is NULL"<<endl;
                 }
 
-
+                count++;
             }
         }
             return 0;
