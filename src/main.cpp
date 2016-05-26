@@ -20,11 +20,11 @@
     using namespace std;
 
     //int size_descriptor = 125;
-    const int sample_size = 53;
-    const int object_count = 4;
-    const int sample_keypoint_size = 10;
-    const string data_folder = "../at_home/";
-    const string target_folder = "../features/";
+    int sample_size = 53;
+    int object_count = 4;
+    int sample_keypoint_size = 10;
+    string data_folder = "../at_home/";
+    string target_folder = "../features/";
     string object_names[4] = {"MuscleBox","BigCoffeeCup","Pringles","SmallKetchupBottle"};
     string str;
 
@@ -233,10 +233,6 @@
 
     }
 
-    void sample_keypoints(pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints,pcl::PointCloud<pcl::PointXYZ>::Ptr sampled_keypoints)
-    {
-
-    }
 
     void visualize_histogram(pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors)
     {
@@ -284,6 +280,21 @@
         // cout << "Size of point cloud " << pointcloud->width * pointcloud->height<<endl;
         // calculate_pfh(pointcloud);
         //string in_file(data_folder),out_file(target_folder);
+
+        cout<<"Feature Extraction Script:"<<endl;
+        cout<<"Input folder:";
+        cin>>data_folder;
+        cout<<"Output folder:";
+        cin>>target_folder;
+
+        cout<<"Provide sample details:"<<endl;
+        cout<<"Sample Size:";
+        cin>>sample_size;
+        cout<<"Number of Object:";
+        cin>>object_count;
+
+        cout<<"\nExtracting Features for given samples"<<endl;
+
         for(int i = 0;i < object_count; i++)
         {
             //in_file.append(object_names[i]);
