@@ -258,12 +258,17 @@
         myfile.open (filename);
         //myfile << object_names[idx] <<endl;
         for( int i = 0; i < descriptors->points.size(); i++)
-        {
+            {
                 if(i < sample_keypoint_size)
                 {
-                for(int j=0;j<33;j++)
-                myfile << descriptors->points[i].histogram[j] <<",";
-                myfile<< endl;    
+                    for(int j=0;j<33;j++)
+                    {
+                        myfile << descriptors->points[i].histogram[j];
+                        if(j!=32)
+                        myfile<<",";  
+                    }
+                
+                    myfile<< endl;    
                 }
             
         }
