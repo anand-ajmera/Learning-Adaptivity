@@ -22,9 +22,10 @@
     //int size_descriptor = 125;
     const int sample_size = 53;
     const int object_count = 4;
+    const int sample_keypoint_size = 10;
     const string data_folder = "../at_home/";
     const string target_folder = "../features/";
-    string object_names[4] = {"MuscleBox/","BigCoffeeCup/","Pringles/","SmallKetchupBottle/"};
+    string object_names[4] = {"MuscleBox","BigCoffeeCup","Pringles","SmallKetchupBottle"};
     string str;
 
 
@@ -232,6 +233,11 @@
 
     }
 
+    void sample_keypoints(pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints,pcl::PointCloud<pcl::PointXYZ>::Ptr sampled_keypoints)
+    {
+
+    }
+
     void visualize_histogram(pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors)
     {
         const std::string id="cloud";
@@ -245,9 +251,23 @@
         }
     }
 
-    void write_to_file(pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors,const string filename)
+    void write_to_file(pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors,const char* filename,const int& idx)
     {
-        pcl::io::savePCDFile (filename, *descriptors);
+        //pcl::io::savePCDFile (filename, *descriptors);
+        ofstream myfile;
+        myfile.open (filename);
+        //myfile << object_names[idx] <<endl;
+        for( int i = 0; i < descriptors->points.size(); i++)
+        {
+                if(i < sample_keypoint_size)
+                {
+                for(int j=0;j<33;j++)
+                myfile << descriptors->points[i].histogram[j] <<",";
+                myfile<< endl;    
+                }
+            
+        }
+        myfile.close();
         cout<<"saved to file"<<filename<<endl;
     }
 
@@ -264,7 +284,7 @@
             //in_file.append(object_names[i]);
             for(int j=1;j<= sample_size;j++)
             {   string in_file(data_folder);
-                in_file.append(object_names[i]);
+                in_file.append(object_names[i]+"/");
                 in_file.append(boost::to_string(j)+".pcd");
                 //cout<<in_file<<endl;
 
@@ -278,9 +298,9 @@
                         //cout<<"descriptors"<<descriptors->points[0]<<endl;
                         //saving the features to pcd file
                         string out_file(target_folder);
-                        out_file.append(object_names[i]);
-                        out_file.append(boost::to_string(j)+".pcd");  
-                        write_to_file(descriptors,out_file);
+                        out_file.append(object_names[i]+"/");
+                        out_file.append(boost::to_string(j)+".csv");  
+                        write_to_file(descriptors,out_file.c_str(),i);
                         //visualize_histogram(descriptors);
                         //cout<<"object written"<<endl;
                 }
