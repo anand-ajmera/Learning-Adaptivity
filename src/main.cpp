@@ -293,12 +293,12 @@
         cin>>sample_size;
         cout<<"Number of Object:";
         cin>>object_count;
-        cout<<"Enter \n 1- Extract features for training \n 2 - Extract features for testing";
+        cout<<"Enter \n 1- Extract features for training \n 2 - Extract features for testing\n Enter value:";
         cin >> choice;
         cout<<"\nExtracting Features for given samples"<<endl;
 
 
-        int count = 0;
+        //int count = 0;
         for(int i = 0;i < object_count; i++)
         {
             //in_file.append(object_names[i]);
@@ -331,7 +331,8 @@
                             string out_file(target_folder);
                             //cout<<out_file;
                             //out_file.append("/");
-                            out_file.append(boost::to_string(count)+".csv"); 
+                            out_file.append(object_names[i]+"_");
+                            out_file.append(boost::to_string(j)+".csv"); 
                             write_to_file(descriptors,out_file.c_str(),i);
                         }
                         else
@@ -347,7 +348,7 @@
                     cerr<<"Cloud pointer is NULL"<<endl;
                 }
 
-                count++;
+                //count++;
             }
         }
             return 0;
