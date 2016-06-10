@@ -20,16 +20,18 @@
     using namespace std;
 
     //int size_descriptor = 125;
-    int sample_size = 53;
+    int sample_size_train = 20;
+    int sample_size_test = 20;
+    int sample_size = 20;
+
     int object_count = 4;
     int sample_keypoint_size = 10;
-    string data_folder = "../at_home/";
+    string data_folder = "../At_Home/";
     string target_folder = "../features/";
-    string object_names[4] = {"MuscleBox","BigCoffeeCup","Pringles","SmallKetchupBottle"};
+    string object_names[14] = {"Apfelsaft","BigKetchupBottle","BlackPringles","DoppelkeksBiscuit","KaffeeBox",
+                                "Maggi","Messmer","MuscleBox","Orangensaft","RedBull","RedCup","SmallKetchupBottle",
+                                "Sponge","YellowPringles"};
     string str;
-
-
-
      
     // This function by Tommaso Cavallari and Federico Tombari, taken from the tutorial
     // http://pointclouds.org/documentation/tutorials/correspondence_grouping.php
@@ -250,6 +252,12 @@
     void write_to_file(pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors,const char* filename,const int& idx)
     {
         //pcl::io::savePCDFile (filename, *descriptors);
+        // const char* path = filename;
+        // boost::filesystem::path dir(path);
+        // if(boost::filesystem::create_directory(dir))
+        // {
+        //     std::cerr<< "Directory Created: "<<path<<std::endl;
+        // }
         ofstream myfile;
         myfile.open (filename);
         //myfile << object_names[idx] <<endl;
@@ -282,30 +290,67 @@
         //string in_file(data_folder),out_file(target_folder);
 
         int choice = 0;
-        cout<<"Feature Extraction Script:"<<endl;
-        cout<<"Input folder:";
-        cin>>data_folder;
-        cout<<"Output folder:";
-        cin>>target_folder;
+        // cout<<"Feature Extraction Script:"<<endl;
+        // cout<<"Input folder:";
+        // cin>>data_folder;
+        // cout<<"Output folder:";
+        // cin>>target_folder;
 
-        cout<<"Provide sample details:"<<endl;
-        cout<<"Sample Size:";
-        cin>>sample_size;
-        cout<<"Number of Object:";
-        cin>>object_count;
+        // cout<<"Provide sample details:"<<endl;
+        // cout<<"Sample Size:";
+        // cin>>sample_size;
+        // cout<<"Number of Object:";
+        // cin>>object_count;
         cout<<"Enter \n 1- Extract features for training \n 2 - Extract features for testing\n Enter value:";
         cin >> choice;
-        cout<<"\nExtracting Features for given samples"<<endl;
+        // cout<<"\nExtracting Features for given samples"<<endl;
+
+        switch(choice)
+        {
+            case 1:
+                    data_folder = "../training_samples/";
+                    target_folder = "../features/";
+                    sample_size = 20;
+                    object_count = 14;
+                    break;
+
+            case 2:
+                    data_folder = "../test_samples/";
+                    target_folder = "../testFeatures/";
+                    sample_size = 10;
+                    object_count = 14;
+                    break;
+
+            default:
+                    cout << "invalid" << endl;
+
+        }
 
 
         //int count = 0;
         for(int i = 0;i < object_count; i++)
         {
             //in_file.append(object_names[i]);
-            for(int j=1;j<= sample_size;j++)
-            {   string in_file(data_folder);
-                in_file.append(object_names[i]+"/");
-                in_file.append(boost::to_string(j)+".pcd");
+            for(int j=0;j < sample_size; j++)
+            {   
+
+                string in_file(data_folder);
+
+                if(choice == 1)
+                {
+
+                    in_file.append(object_names[i]+"/");
+                    in_file.append(object_names[i]+"_");
+                    in_file.append(boost::to_string(j)+".pcd");
+                }
+
+                else if(choice == 2)
+                {
+
+                    in_file.append(object_names[i]+"_");
+                    in_file.append(boost::to_string(j)+".pcd");
+
+                }
                 //cout<<in_file<<endl;
 
                 //load pcd
@@ -322,7 +367,14 @@
                         {
                             string out_file(target_folder);
                             out_file.append(object_names[i]+"/");
+
+                            if(j == 0)
+                            {
+                                mkdir(out_file.c_str(),0777);
+                            }
+
                             out_file.append(boost::to_string(j)+".csv");  
+
                             write_to_file(descriptors,out_file.c_str(),i);  
                         }
                         else if(choice == 2)
@@ -340,7 +392,7 @@
                             cout<<"Invalid choice\n";
                         }
 
-                        //visualize_histogram(descriptors);
+                        // visualize_histogram(descriptors);
                         //cout<<"object written"<<endl;
                 }
                 else
@@ -351,5 +403,8 @@
                 //count++;
             }
         }
+
+            // visualize_histogram(descriptors);
+
             return 0;
     }
