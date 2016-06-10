@@ -29,8 +29,12 @@ import pcl
 import colorsys
 import cPickle as pickle
 import sklearn.svm
+import re
+import matplotlib.pyplot as plt
 
-
+labels = ["Apfelsaft","BigKetchupBottle","BlackPringles","DoppelkeksBiscuit","KaffeeBox",
+                                "Maggi","Messmer","MuscleBox","Orangensaft","RedBull","RedCup","SmallKetchupBottle",
+                                "Sponge","YellowPringles"]
 class ObjectClassifier:
     """
     Defines an SVM classifier with the mean and standard deviation of
@@ -109,8 +113,8 @@ class Trainer:
         encoded_labels = label_encoder.transform(label_pool)[:, np.newaxis]
         encoded_labels = np.squeeze(encoded_labels.T)
 
-        # classifier = sklearn.svm.SVC(kernel='linear', probability=True)
-        classifier = sklearn.tree.DecisionTreeClassifier()        
+        classifier = sklearn.svm.SVC(kernel='linear', probability=True)
+        # classifier = sklearn.tree.DecisionTreeClassifier()        
         # classifier = sklearn.ensemble.RandomForestClassifier(n_estimators=10)
         classifier.fit(feature_pool, encoded_labels)
 
@@ -133,11 +137,15 @@ class Classfiy:
             if n < 1 :
                 len_of_file = len(features)
                 feature_pool = np.array(features)
-                true_labels = [f]
+                m = re.search('../testFeatures/(.+?)_',f)
+                if m:
+                    true_labels = [m.group(1)]
             else:
                 if(len(features) == len_of_file):
                     feature_pool = np.vstack([feature_pool, features])
-                    true_labels.append(f)
+                    m = re.search('../testFeatures/(.+?)_',f)
+                    if m:
+                        true_labels.append(m.group(1))
             n += 1
 
         return [feature_pool,true_labels]
@@ -156,6 +164,17 @@ class Classfiy:
             n += 1
 
         return all_labels
+
+    def plot_confusion_matrix(self,cm,  labels, title='Confusion matrix', cmap=plt.cm.Blues):
+        plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        plt.title(title)
+        plt.colorbar()
+        tick_marks = np.arange(len(labels))
+        plt.xticks(tick_marks, labels, rotation=45)
+        plt.yticks(tick_marks, labels)
+        plt.tight_layout()
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
 
 
 if __name__ == "__main__":
@@ -187,4 +206,14 @@ if __name__ == "__main__":
     for i in range(len(predicted_labels)):
         print "Predicted Label " , i, " : ",predicted_labels[i], " True label : " , true_labels[i] 
 
-	
+    print "Accuracy is " , sklearn.metrics.accuracy_score(true_labels,predicted_labels)
+
+
+    # Compute confusion matrix
+    cm = sklearn.metrics.confusion_matrix(true_labels, predicted_labels)
+    np.set_printoptions(precision=2)
+    print('Confusion matrix, without normalization')
+    print(cm)
+    plt.figure()
+    test.plot_confusion_matrix(cm,labels)
+    plt.show()
